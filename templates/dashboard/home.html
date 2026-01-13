@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="py-10">
+    <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="md:flex md:items-center md:justify-between">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                    Welcome back, {{ user.first_name|default:user.email }}
+                </h1>
+                <p class="mt-1 text-sm text-gray-500">{{ firm.name }}</p>
+            </div>
+            <div class="mt-4 flex md:ml-4 md:mt-0">
+                <a href="{% url 'invoices:upload' %}" class="ml-3 inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Upload Invoice
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <!-- Stats -->
+        <div class="mt-8">
+            <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Invoices This Month</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+                        {{ stats.invoices_this_month }}
+                        <span class="text-sm font-normal text-gray-500">/ {{ stats.invoices_limit }}</span>
+                    </dd>
+                </div>
+                <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Discrepancies Found</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-yellow-600">{{ stats.discrepancies_found }}</dd>
+                </div>
+                <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Resolved</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-green-600">{{ stats.discrepancies_resolved }}</dd>
+                </div>
+                <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                    <dt class="truncate text-sm font-medium text-gray-500">Savings Identified</dt>
+                    <dd class="mt-1 text-3xl font-semibold tracking-tight text-primary-600">${{ stats.total_savings|floatformat:0 }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <!-- Recent Invoices -->
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-semibold leading-6 text-gray-900">Recent Invoices</h3>
+                        <a href="{% url 'invoices:list' %}" class="text-sm font-medium text-primary-600 hover:text-primary-500">View all</a>
+                    </div>
+                    <div class="mt-6 flow-root">
+                        <ul role="list" class="-my-5 divide-y divide-gray-200">
+                            {% for invoice in recent_invoices %}
+                            <li class="py-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-sm font-medium text-gray-900">{{ invoice.client_name|default:"Processing..." }}</p>
+                                        <p class="truncate text-sm text-gray-500">{{ invoice.invoice_number|default:invoice.original_filename }}</p>
+                                    </div>
+                                    <div class="flex items-center">
+                                        {% if invoice.status == 'extracted' or invoice.status == 'confirmed' %}
+                                        <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Ready</span>
+                                        {% elif invoice.status == 'processing' or invoice.status == 'pending' %}
+                                        <span class="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20">Processing</span>
+                                        {% elif invoice.status == 'review' %}
+                                        <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">Review</span>
+                                        {% else %}
+                                        <span class="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">Error</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </li>
+                            {% empty %}
+                            <li class="py-4 text-center text-gray-500">
+                                No invoices yet. <a href="{% url 'invoices:upload' %}" class="text-primary-600 hover:text-primary-500">Upload your first invoice</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Reconciliations -->
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-semibold leading-6 text-gray-900">Recent Reconciliations</h3>
+                        <a href="{% url 'reconciliation:list' %}" class="text-sm font-medium text-primary-600 hover:text-primary-500">View all</a>
+                    </div>
+                    <div class="mt-6 flow-root">
+                        <ul role="list" class="-my-5 divide-y divide-gray-200">
+                            {% for recon in recent_reconciliations %}
+                            <li class="py-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-sm font-medium text-gray-900">{{ recon.name }}</p>
+                                        <p class="truncate text-sm text-gray-500">{{ recon.discrepancy_count }} discrepancies</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-900">{{ recon.match_rate }}%</span>
+                                        <span class="text-sm text-gray-500">match</span>
+                                    </div>
+                                </div>
+                            </li>
+                            {% empty %}
+                            <li class="py-4 text-center text-gray-500">
+                                No reconciliations yet. <a href="{% url 'reconciliation:create' %}" class="text-primary-600 hover:text-primary-500">Start your first reconciliation</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Getting Started (show if new user) -->
+        {% if not recent_invoices %}
+        <div class="mt-8 rounded-lg bg-primary-50 p-6">
+            <h3 class="text-lg font-semibold text-primary-900">Getting Started</h3>
+            <ol class="mt-4 space-y-4 text-sm text-primary-800">
+                <li class="flex items-start">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white text-xs font-bold">1</span>
+                    <span class="ml-3"><a href="{% url 'integrations:list' %}" class="font-medium underline">Connect your Clio or MyCase account</a> to sync time entries</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white text-xs font-bold">2</span>
+                    <span class="ml-3"><a href="{% url 'invoices:upload' %}" class="font-medium underline">Upload your first invoice PDF</a> for AI extraction</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white text-xs font-bold">3</span>
+                    <span class="ml-3"><a href="{% url 'reconciliation:create' %}" class="font-medium underline">Run a reconciliation</a> to find discrepancies</span>
+                </li>
+            </ol>
+        </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}
