@@ -27,5 +27,9 @@ RUN python manage.py collectstatic --noinput --clear
 # Create static directory
 RUN mkdir -p /app/static
 
-# Startup script
-CMD python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --access-logfile - --error-logfile -
+# Copy and make entrypoint executable
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Run entrypoint script
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
