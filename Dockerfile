@@ -24,5 +24,8 @@ COPY . .
 # Collect static files
 RUN python manage.py collectstatic --noinput --clear
 
-# Run gunicorn
-CMD gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4
+# Create static directory
+RUN mkdir -p /app/static
+
+# Startup script
+CMD python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --access-logfile - --error-logfile -
