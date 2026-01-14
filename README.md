@@ -119,5 +119,5 @@ Proprietary - All rights reserved.
 
 ## Contact
 
-- Email: support@invoicerecon.com
+- Email: admin@invoicerecon.app
 - GitHub: https://github.com/ryanpate/invoicerecon

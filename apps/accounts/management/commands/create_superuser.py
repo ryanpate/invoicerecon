@@ -12,7 +12,7 @@ class Command(BaseCommand):
     help = 'Create a superuser from environment variables'
 
     def handle(self, *args, **options):
-        email = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@invoicerecon.com')
+        email = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@invoicerecon.app')
         password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
 
         if not password:

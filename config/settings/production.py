@@ -69,4 +69,4 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'
 EMAIL_HOST_PASSWORD = env('SENDGRID_API_KEY', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@invoicerecon.com')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='admin@invoicerecon.app')

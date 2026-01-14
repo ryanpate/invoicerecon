@@ -65,7 +65,7 @@ class PricingView(TemplateView):
                     'On-premise option',
                 ],
                 'cta': 'Contact Sales',
-                'href': 'mailto:sales@invoicerecon.com',
+                'href': 'mailto:admin@invoicerecon.app',
             },
         ]
         return context
