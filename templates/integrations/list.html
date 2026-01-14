@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Integrations{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div class="sm:flex sm:items-center">
+        <div class="sm:flex-auto">
+            <h1 class="text-2xl font-semibold text-gray-900">Integrations</h1>
+            <p class="mt-2 text-sm text-gray-700">
+                Connect your practice management software to automatically sync time entries.
+            </p>
+        </div>
+    </div>
+
+    {% if coming_soon %}
+    <div class="mt-8">
+        <div class="rounded-lg bg-blue-50 p-8 text-center">
+            <svg class="mx-auto h-12 w-12 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H6A2.25 2.25 0 003.75 6v2.25A2.25 2.25 0 006 10.5zm0 9.75h2.25A2.25 2.25 0 0010.5 18v-2.25a2.25 2.25 0 00-2.25-2.25H6a2.25 2.25 0 00-2.25 2.25V18A2.25 2.25 0 006 20.25zm9.75-9.75H18a2.25 2.25 0 002.25-2.25V6A2.25 2.25 0 0018 3.75h-2.25A2.25 2.25 0 0013.5 6v2.25a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">Practice Management Integrations Coming Soon</h3>
+            <p class="mt-2 text-sm text-gray-600">
+                We're working on integrations with Clio, MyCase, and other popular legal practice management platforms.
+            </p>
+            <p class="mt-4 text-sm text-gray-500">
+                In the meantime, you can upload invoices manually and we'll match them against your time entries.
+            </p>
+            <div class="mt-6">
+                <a href="{% url 'invoices:upload' %}" class="inline-flex items-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500">
+                    Upload Invoices
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Connected Integrations -->
+    {% if integrations %}
+    <div class="mt-8">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Connected</h2>
+        <ul class="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+            {% for integration in integrations %}
+            <li class="flex items-center justify-between py-4 px-4">
+                <div class="flex items-center">
+                    <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-900">{{ integration.get_provider_display }}</p>
+                        <p class="text-sm text-gray-500">
+                            {% if integration.last_sync_at %}
+                                Last synced {{ integration.last_sync_at|timesince }} ago
+                            {% else %}
+                                Never synced
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <form method="post" action="{% url 'integrations:sync_'|add:integration.provider %}">
+                        {% csrf_token %}
+                        <button type="submit" class="text-sm text-primary-600 hover:text-primary-500">
+                            Sync Now
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'integrations:disconnect' integration.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="text-sm text-red-600 hover:text-red-500">
+                            Disconnect
+                        </button>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Available Integrations -->
+    {% if available_providers %}
+    <div class="mt-8">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Available Integrations</h2>
+        <ul class="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+            {% for provider in available_providers %}
+            {% if not provider.connected %}
+            <li class="flex items-center justify-between py-4 px-4">
+                <div class="flex items-center">
+                    <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H6A2.25 2.25 0 003.75 6v2.25A2.25 2.25 0 006 10.5zm0 9.75h2.25A2.25 2.25 0 0010.5 18v-2.25a2.25 2.25 0 00-2.25-2.25H6a2.25 2.25 0 00-2.25 2.25V18A2.25 2.25 0 006 20.25zm9.75-9.75H18a2.25 2.25 0 002.25-2.25V6A2.25 2.25 0 0018 3.75h-2.25A2.25 2.25 0 0013.5 6v2.25a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-900">{{ provider.name }}</p>
+                        <p class="text-sm text-gray-500">Connect to sync time entries</p>
+                    </div>
+                </div>
+                <a href="{% url 'integrations:'|add:provider.id|add:'_connect' %}" class="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500">
+                    Connect
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

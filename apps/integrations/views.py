@@ -26,10 +26,13 @@ class IntegrationListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         # Check which integrations are available
         existing = set(self.get_queryset().values_list('provider', flat=True))
+        # Integrations temporarily disabled - coming soon
+        # To re-enable, uncomment the providers below and configure API credentials
         context['available_providers'] = [
-            {'id': 'clio', 'name': 'Clio', 'connected': 'clio' in existing},
-            {'id': 'mycase', 'name': 'MyCase', 'connected': 'mycase' in existing},
+            # {'id': 'clio', 'name': 'Clio', 'connected': 'clio' in existing},
+            # {'id': 'mycase', 'name': 'MyCase', 'connected': 'mycase' in existing},
         ]
+        context['coming_soon'] = True
         return context
 
 
