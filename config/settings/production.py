@@ -29,21 +29,21 @@ if DATABASE_URL:
 # Allowed hosts from environment
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
     '.railway.app',
-    'invoicerecon.com',
-    'www.invoicerecon.com',
+    'invoicerecon.app',
+    'www.invoicerecon.app',
 ])
 
 # Add Railway domains to CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',
-    'https://invoicerecon.com',
-    'https://www.invoicerecon.com',
+    'https://invoicerecon.app',
+    'https://www.invoicerecon.app',
 ]
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
-    'https://invoicerecon.com',
-    'https://www.invoicerecon.com',
+    'https://invoicerecon.app',
+    'https://www.invoicerecon.app',
 ]
 
 # AWS S3 for media files (invoice PDFs)
