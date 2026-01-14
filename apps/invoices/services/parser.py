@@ -4,6 +4,8 @@ Invoice parsing service using Claude API for intelligent data extraction.
 import base64
 import json
 import logging
+import tempfile
+import os
 from decimal import Decimal
 from typing import Optional
 from django.conf import settings
@@ -12,6 +14,22 @@ import anthropic
 import fitz  # PyMuPDF
 
 logger = logging.getLogger(__name__)
+
+
+def get_file_path(file_field):
+    """
+    Get a local file path for a file field, handling both local and S3 storage.
+    For S3, downloads to a temp file and returns the path.
+    """
+    try:
+        # Try local path first
+        return file_field.path
+    except NotImplementedError:
+        # S3 storage - download to temp file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_file.write(file_field.read())
+        temp_file.close()
+        return temp_file.name
 
 INVOICE_EXTRACTION_PROMPT = """
 Analyze this legal invoice and extract all information into a structured JSON format.
@@ -242,7 +260,15 @@ def process_invoice(invoice_id: str) -> bool:
         invoice.save(update_fields=['status'])
 
         parser = InvoiceParser()
-        result = parser.extract_from_pdf(invoice.file.path)
+        pdf_path = get_file_path(invoice.file)
+        result = parser.extract_from_pdf(pdf_path)
+
+        # Clean up temp file if created
+        if pdf_path != invoice.file.name and os.path.exists(pdf_path):
+            try:
+                os.unlink(pdf_path)
+            except Exception:
+                pass
 
         # Log the processing attempt
         InvoiceProcessingLog.objects.create(

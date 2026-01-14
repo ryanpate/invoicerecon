@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Invoice, InvoiceLineItem
 from .serializers import InvoiceSerializer, InvoiceListSerializer
-from .tasks import process_invoice_task
+from .services.parser import process_invoice
 
 
 class InvoiceListView(LoginRequiredMixin, ListView):
@@ -84,8 +84,14 @@ class InvoiceUploadView(LoginRequiredMixin, View):
             status='pending'
         )
 
-        # Queue for processing
-        process_invoice_task.delay(str(invoice.id))
+        # Process invoice synchronously (Celery worker not running)
+        try:
+            success = process_invoice(str(invoice.id))
+            invoice.refresh_from_db()
+        except Exception as e:
+            invoice.status = 'error'
+            invoice.processing_error = str(e)
+            invoice.save()
 
         if request.headers.get('HX-Request'):
             return render(request, 'invoices/partials/upload_success.html', {
@@ -94,8 +100,8 @@ class InvoiceUploadView(LoginRequiredMixin, View):
 
         return JsonResponse({
             'id': str(invoice.id),
-            'status': 'pending',
-            'message': 'Invoice uploaded and queued for processing'
+            'status': invoice.status,
+            'message': 'Invoice processed' if invoice.status != 'error' else invoice.processing_error
         })
 
 
