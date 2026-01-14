@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-# Build cache buster: v4
+# Build cache buster: v5 - force rebuild
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
