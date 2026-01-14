@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoice {{ invoice.invoice_number|default:invoice.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="py-10">
+    <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="md:flex md:items-center md:justify-between">
+            <div class="min-w-0 flex-1">
+                <nav class="flex" aria-label="Breadcrumb">
+                    <ol role="list" class="flex items-center space-x-4">
+                        <li>
+                            <a href="{% url 'invoices:list' %}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Invoices</a>
+                        </li>
+                        <li>
+                            <div class="flex items-center">
+                                <svg class="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="ml-4 text-sm font-medium text-gray-500">{{ invoice.invoice_number|default:invoice.original_filename }}</span>
+                            </div>
+                        </li>
+                    </ol>
+                </nav>
+                <h1 class="mt-2 text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl">
+                    {{ invoice.client_name|default:"Processing..." }}
+                </h1>
+                <div class="mt-1 flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-6">
+                    <div class="mt-2 flex items-center text-sm text-gray-500">
+                        Invoice #{{ invoice.invoice_number|default:"-" }}
+                    </div>
+                    {% if invoice.matter_number %}
+                    <div class="mt-2 flex items-center text-sm text-gray-500">
+                        Matter: {{ invoice.matter_number }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mt-4 flex md:ml-4 md:mt-0 space-x-3">
+                {% if invoice.status == 'error' %}
+                <form action="{% url 'invoices:reprocess' invoice.pk %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex items-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500">
+                        Reprocess
+                    </button>
+                </form>
+                {% endif %}
+                <a href="{% url 'invoices:list' %}" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                    Back to List
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-8">
+        <!-- Status and Confidence -->
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Status</dt>
+                    <dd class="mt-1">
+                        {% if invoice.status == 'extracted' or invoice.status == 'confirmed' %}
+                        <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">{{ invoice.get_status_display }}</span>
+                        {% elif invoice.status == 'processing' or invoice.status == 'pending' %}
+                        <span class="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20">{{ invoice.get_status_display }}</span>
+                        {% elif invoice.status == 'review' %}
+                        <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">{{ invoice.get_status_display }}</span>
+                        {% else %}
+                        <span class="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">{{ invoice.get_status_display }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Extraction Confidence</dt>
+                    <dd class="mt-1">
+                        {% if invoice.extraction_confidence %}
+                        <div class="flex items-center">
+                            <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                <div class="bg-primary-600 h-2 rounded-full" style="width: {{ invoice.extraction_confidence|floatformat:0 }}%"></div>
+                            </div>
+                            <span class="text-lg font-semibold text-gray-900">{{ invoice.extraction_confidence|floatformat:0 }}%</span>
+                        </div>
+                        {% else %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Line Items</dt>
+                    <dd class="mt-1 text-lg font-semibold text-gray-900">{{ invoice.line_items.count }}</dd>
+                </div>
+            </div>
+        </div>
+
+        {% if invoice.processing_error %}
+        <div class="rounded-md bg-red-50 p-4 mb-8">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Processing Error</h3>
+                    <p class="mt-2 text-sm text-red-700">{{ invoice.processing_error }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if invoice.extraction_notes %}
+        <div class="rounded-md bg-blue-50 p-4 mb-8">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">Extraction Notes</h3>
+                    <p class="mt-2 text-sm text-blue-700">{{ invoice.extraction_notes }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Invoice Details -->
+        <div class="grid grid-cols-1 gap-8 lg:grid-cols-2 mb-8">
+            <!-- Invoice Info -->
+            <div class="bg-white shadow sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                    <h3 class="text-base font-semibold leading-6 text-gray-900">Invoice Information</h3>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Client Name</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ invoice.client_name|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Matter Number</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ invoice.matter_number|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Invoice Number</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ invoice.invoice_number|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Billing Attorney</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ invoice.billing_attorney|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Invoice Date</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ invoice.invoice_date|date:"M d, Y"|default:"-" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Due Date</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ invoice.due_date|date:"M d, Y"|default:"-" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Amounts -->
+            <div class="bg-white shadow sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                    <h3 class="text-base font-semibold leading-6 text-gray-900">Amounts</h3>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    <dl class="space-y-4">
+                        <div class="flex justify-between">
+                            <dt class="text-sm font-medium text-gray-500">Subtotal</dt>
+                            <dd class="text-sm text-gray-900">${{ invoice.subtotal|floatformat:2 }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm font-medium text-gray-500">Taxes</dt>
+                            <dd class="text-sm text-gray-900">${{ invoice.taxes|floatformat:2 }}</dd>
+                        </div>
+                        {% if invoice.retainer_applied %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm font-medium text-gray-500">Retainer Applied</dt>
+                            <dd class="text-sm text-green-600">-${{ invoice.retainer_applied|floatformat:2 }}</dd>
+                        </div>
+                        {% endif %}
+                        <div class="flex justify-between border-t border-gray-200 pt-4">
+                            <dt class="text-base font-semibold text-gray-900">Total</dt>
+                            <dd class="text-base font-semibold text-gray-900">${{ invoice.total_amount|floatformat:2 }}</dd>
+                        </div>
+                        {% if invoice.amount_due != invoice.total_amount %}
+                        <div class="flex justify-between">
+                            <dt class="text-base font-semibold text-primary-600">Amount Due</dt>
+                            <dd class="text-base font-semibold text-primary-600">${{ invoice.amount_due|floatformat:2 }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <div class="bg-white shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h3 class="text-base font-semibold leading-6 text-gray-900">Line Items</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-300">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Date</th>
+                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Description</th>
+                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Timekeeper</th>
+                            <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Hours</th>
+                            <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Rate</th>
+                            <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 sm:pr-6">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                        {% for item in invoice.line_items.all %}
+                        <tr>
+                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 sm:pl-6">
+                                {{ item.date|date:"M d, Y"|default:"-" }}
+                            </td>
+                            <td class="px-3 py-4 text-sm text-gray-900 max-w-md">
+                                <div class="truncate" title="{{ item.description }}">{{ item.description }}</div>
+                                {% if item.item_type != 'time' %}
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{{ item.get_item_type_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                {{ item.timekeeper|default:"-" }}
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">
+                                {% if item.hours %}{{ item.hours|floatformat:2 }}{% else %}-{% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">
+                                {% if item.rate %}${{ item.rate|floatformat:2 }}{% else %}-{% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900 text-right sm:pr-6">
+                                ${{ item.amount|floatformat:2 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                <p>No line items extracted yet.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- File Info -->
+        <div class="mt-8 bg-white shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h3 class="text-base font-semibold leading-6 text-gray-900">File Information</h3>
+            </div>
+            <div class="px-4 py-5 sm:p-6">
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Original Filename</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ invoice.original_filename }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">File Size</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ invoice.file_size|filesizeformat }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Uploaded</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ invoice.created_at|date:"M d, Y H:i" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Processed</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ invoice.processed_at|date:"M d, Y H:i"|default:"-" }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

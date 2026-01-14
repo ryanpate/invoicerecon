@@ -61,18 +61,22 @@ class InvoiceUploadView(LoginRequiredMixin, View):
 
     def post(self, request):
         if not request.user.firm:
-            return JsonResponse({'error': 'No firm associated'}, status=400)
+            messages.error(request, 'You must be part of a firm to upload invoices.')
+            return redirect('dashboard:home')
 
         if not request.user.firm.can_process_invoice:
-            return JsonResponse({'error': 'Invoice limit reached'}, status=403)
+            messages.error(request, 'You have reached your monthly invoice limit. Please upgrade your plan.')
+            return redirect('billing:overview')
 
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
-            return JsonResponse({'error': 'No file provided'}, status=400)
+            messages.error(request, 'No file provided.')
+            return redirect('invoices:upload')
 
         # Validate file type
         if not uploaded_file.name.lower().endswith('.pdf'):
-            return JsonResponse({'error': 'Only PDF files are accepted'}, status=400)
+            messages.error(request, 'Only PDF files are accepted.')
+            return redirect('invoices:upload')
 
         # Create invoice record
         invoice = Invoice.objects.create(
@@ -88,21 +92,18 @@ class InvoiceUploadView(LoginRequiredMixin, View):
         try:
             success = process_invoice(str(invoice.id))
             invoice.refresh_from_db()
+            if invoice.status == 'error':
+                messages.error(request, f'Error processing invoice: {invoice.processing_error}')
+            else:
+                messages.success(request, f'Invoice processed successfully! Extracted {invoice.line_items.count()} line items.')
         except Exception as e:
             invoice.status = 'error'
             invoice.processing_error = str(e)
             invoice.save()
+            messages.error(request, f'Error processing invoice: {str(e)}')
 
-        if request.headers.get('HX-Request'):
-            return render(request, 'invoices/partials/upload_success.html', {
-                'invoice': invoice
-            })
-
-        return JsonResponse({
-            'id': str(invoice.id),
-            'status': invoice.status,
-            'message': 'Invoice processed' if invoice.status != 'error' else invoice.processing_error
-        })
+        # Redirect to invoice detail page
+        return redirect('invoices:detail', pk=invoice.pk)
 
 
 class InvoiceReprocessView(LoginRequiredMixin, View):
